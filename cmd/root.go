@@ -24,19 +24,19 @@ import (
 
 var cfgFile string
 
-// RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "ami-automation",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "CLI tool for generating AWS AMIs",
+	Long: `
+ami-automation is a CLI tool to make using AWS' SSM Automation functionality
+from either a terminal or a CI system as easy as possible.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-// Uncomment the following line if your bare application
-// has an action associated with it:
-//	Run: func(cmd *cobra.Command, args []string) { },
+The 'start' subcommand will start an automation execution and stream its
+progress to stderr until the automation has finished. The automation document's
+outputs are printed to stdout on completion. A failure exit code will be returned
+if the automation fails.
+`,
+
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
