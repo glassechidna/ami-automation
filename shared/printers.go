@@ -76,7 +76,8 @@ func (p *RunCommandPrinter) Print(file *os.File, sess *session.Session, step *ss
 	bucket := step.Inputs["OutputS3BucketName"]
 
 	if bucket != nil {
-		bucketName := strings.Replace(*bucket, "\"", "", -1)
+		bucketName, err := strconv.Unquote(*bucket)
+		if err != nil { return err }
 
 		commandId := step.Outputs["CommandId"]
 		keyPrefix := *commandId[0]
