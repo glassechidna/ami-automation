@@ -13,9 +13,10 @@ install:
   
 script:
   - |
-    set -euxo pipefail
+    set -exo pipefail
     export VERSION=$(git describe --tags)
     export DATE=$(date +%FT%T%z)
+    export CGO_ENABLED=0
     gox -arch="amd64" -os="windows linux darwin" -ldflags="-X github.com/glassechidna/ami-automation/shared.ApplicationVersion=${VERSION} -X github.com/glassechidna/ami-automation/shared.ApplicationBuildDate=${DATE}"
     
     upx-3.94-amd64_linux/upx ami-automation_*
