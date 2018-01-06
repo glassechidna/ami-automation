@@ -19,9 +19,12 @@ import (
 	"github.com/spf13/viper"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"strings"
-	"log"
 	"github.com/glassechidna/ami-automation/shared"
 	"os"
+	"github.com/fatih/color"
+	"encoding/json"
+	"fmt"
+	"log"
 )
 
 var startCmd = &cobra.Command{
@@ -34,19 +37,52 @@ var startCmd = &cobra.Command{
 		rawParameters := viper.GetStringSlice("parameter")
 		params := parseRawParameters(rawParameters)
 
-		execId, err := start(name, version, params)
+		accounts := viper.GetStringSlice("account")
+		regions := viper.GetStringSlice("region")
+
+		shouldWait := viper.GetBool("copy-wait")
+
+		execId, err := start(name, version, params, accounts, regions)
 		if err != nil { log.Panic(err.Error()) }
+		//execId := "02502d19-f1db-11e7-80b3-e9d13ac5a2bf"
 
 		sess := awsSession()
 		reporter := shared.NewStatusReporter(sess, execId)
 		reporter.Print()
 
-		if reporter.Success() {
-			os.Exit(0)
-		} else {
+		if !reporter.Success() {
 			os.Exit(1)
 		}
+
+		amiId := reporter.AmiIds()[0]
+		regionalAmis := copyAmiUi(sess, amiId, regions)
+		shareAmiUi(sess, regionalAmis, accounts)
+
+		if shouldWait {
+			color.New(color.FgBlue).Fprintln(os.Stderr, "Waiting for copied AMIs to be available")
+			wait(sess, regionalAmis)
+		}
+
+		output := shared.OutputFormat{
+			Outputs: reporter.Outputs(),
+			AmiId: amiId,
+			AmiIds: regionalAmis,
+			WaitCommand: makeWaitCommand(regionalAmis),
+		}
+
+		outputBytes, _ := json.MarshalIndent(output, "", "  ")
+		fmt.Println(string(outputBytes))
 	},
+}
+
+func makeWaitCommand(amiIds map[string]string) string {
+	cmd := fmt.Sprintf("%s util wait", os.Args[0])
+
+	for region, amiId := range amiIds {
+		cmd = fmt.Sprintf("%s -i %s -r %s", cmd, amiId, region)
+	}
+
+	return cmd
 }
 
 func parseRawParameters(rawParameters []string) map[string][]*string {
@@ -67,7 +103,7 @@ func parseRawParameters(rawParameters []string) map[string][]*string {
 	return params
 }
 
-func start(name, version string, parameters map[string][]*string) (string, error) {
+func start(name, version string, parameters map[string][]*string, accounts, regions []string) (string, error) {
 	sess := awsSession()
 	api := ssm.New(sess)
 
@@ -93,6 +129,9 @@ func init() {
 	startCmd.PersistentFlags().String("name", "", "SSM Automation document name")
 	startCmd.PersistentFlags().String("version", "", "(optional) document version")
 	startCmd.PersistentFlags().StringSliceP("parameter", "p", []string{""}, "(optional, multiple) document input parameters")
+	startCmd.PersistentFlags().StringSliceP("region", "r", []string{""}, "(optional, multiple) AWS regions to copy AMI to")
+	startCmd.PersistentFlags().StringSliceP("account", "a", []string{""}, "(optional, multiple) AWS accounts to share AMI with")
+	startCmd.PersistentFlags().BoolP("copy-wait", "w", false, "Wait for copied images to be available")
 
 	viper.BindPFlags(startCmd.PersistentFlags())
 }

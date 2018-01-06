@@ -4,8 +4,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"log"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"encoding/json"
-	"fmt"
 	"time"
 	"github.com/fatih/color"
 	"os"
@@ -56,20 +54,19 @@ func (r *StatusReporter) Success() bool {
 }
 
 func (r *StatusReporter) Print() {
+	color.New(color.FgBlue).Fprintf(r.progress, "SSM Automation execution ID: %s\n", r.execId)
+
 	r.PrintSteps()
-	r.PrintOutputs()
 }
 
-func (r *StatusReporter) PrintOutputs() {
+func (r *StatusReporter) Outputs() map[string][]*string {
 	api := ssm.New(r.sess)
 	resp, err := api.GetAutomationExecution(&ssm.GetAutomationExecutionInput{
 		AutomationExecutionId: &r.execId,
 	})
 	if err != nil { log.Panicf(err.Error()) }
 
-	bytes, err := json.MarshalIndent(resp.AutomationExecution.Outputs, "", "  ")
-	if err != nil { log.Panicf(err.Error()) }
-	fmt.Fprintln(r.results, string(bytes))
+	return resp.AutomationExecution.Outputs
 }
 
 func (r *StatusReporter) PrintSteps() {
@@ -117,4 +114,26 @@ func (r *StatusReporter) PrintStep(step *ssm.StepExecution) error {
 
 	printer := printerForType(*step.Action)
 	return printer.Print(r.progress, r.sess, step)
+}
+
+func (r *StatusReporter) AmiIds() []string {
+	api := ssm.New(r.sess)
+
+	amiIds := []string{}
+
+	resp, err := api.GetAutomationExecution(&ssm.GetAutomationExecutionInput{
+		AutomationExecutionId: &r.execId,
+	})
+	if err != nil {
+		log.Panicf(err.Error())
+	}
+
+	for _, step := range resp.AutomationExecution.StepExecutions {
+		if *step.Action == "aws:createImage" {
+			amiId := *step.Outputs["ImageId"][0]
+			amiIds = append(amiIds, amiId)
+		}
+	}
+
+	return amiIds
 }
