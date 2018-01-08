@@ -42,9 +42,13 @@ var startCmd = &cobra.Command{
 
 		shouldWait := viper.GetBool("copy-wait")
 
+		if len(accounts) > 0 && !shouldWait {
+			fmt.Fprintln(os.Stderr, "You must wait (-w) if you want to share AMIs with other accounts. See GitHub issue #1.")
+			os.Exit(1)
+		}
+
 		execId, err := start(name, version, params, accounts, regions)
 		if err != nil { log.Panic(err.Error()) }
-		//execId := "02502d19-f1db-11e7-80b3-e9d13ac5a2bf"
 
 		sess := awsSession()
 		reporter := shared.NewStatusReporter(sess, execId)
@@ -56,11 +60,11 @@ var startCmd = &cobra.Command{
 
 		amiId := reporter.AmiIds()[0]
 		regionalAmis := copyAmiUi(sess, amiId, regions)
-		shareAmiUi(sess, regionalAmis, accounts)
 
 		if shouldWait {
 			color.New(color.FgBlue).Fprintln(os.Stderr, "Waiting for copied AMIs to be available")
 			wait(sess, regionalAmis)
+			shareAmiUi(sess, regionalAmis, accounts)
 		}
 
 		output := shared.OutputFormat{
