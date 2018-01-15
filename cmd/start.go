@@ -25,6 +25,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 var startCmd = &cobra.Command{
@@ -47,10 +49,11 @@ var startCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		execId, err := start(name, version, params, accounts, regions)
+		sess := awsSession()
+
+		execId, err := start(sess, name, version, params, accounts, regions)
 		if err != nil { log.Panic(err.Error()) }
 
-		sess := awsSession()
 		reporter := shared.NewStatusReporter(sess, execId)
 		reporter.Print()
 
@@ -107,8 +110,7 @@ func parseRawParameters(rawParameters []string) map[string][]*string {
 	return params
 }
 
-func start(name, version string, parameters map[string][]*string, accounts, regions []string) (string, error) {
-	sess := awsSession()
+func start(sess *session.Session, name, version string, parameters map[string][]*string, accounts, regions []string) (string, error) {
 	api := ssm.New(sess)
 
 	input := &ssm.StartAutomationExecutionInput{
