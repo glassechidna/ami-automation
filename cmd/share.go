@@ -46,8 +46,9 @@ func shareAmiUi(sess *session.Session, regionalAmis map[string]string, accounts 
 	if len(accounts) > 0 {
 		boldBlue.Fprint(os.Stderr, "Sharing AMIs with other accounts\n")
 
-		for _, amiId := range regionalAmis {
-			shareAmi(sess, amiId, accounts)
+		for region, amiId := range regionalAmis {
+			regionSess := sess.Copy(&aws.Config{Region: &region})
+			shareAmi(regionSess, amiId, accounts)
 			blue.Fprintf(os.Stderr, "Shared %s with %v\n", amiId, accounts)
 		}
 	}
