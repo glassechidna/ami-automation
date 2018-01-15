@@ -103,6 +103,8 @@ func printerForType(stepType string) StepPrinter {
 		return &InvokeLambdaPrinter{}
 	case "aws:runInstances":
 		return &RunInstancesPrinter{}
+	case "aws:createImage":
+		return &CreateImagePrinter{}
 	default:
 		return &DefaultPrinter{}
 	}

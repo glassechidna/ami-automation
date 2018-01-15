@@ -113,3 +113,18 @@ func (p *RunCommandPrinter) Print(file *os.File, sess *session.Session, step *ss
 
 	return nil
 }
+
+type CreateImagePrinter struct {}
+
+func (p *CreateImagePrinter) Print(file *os.File, sess *session.Session, step *ssm.StepExecution) error {
+	idPtrs := step.Outputs["ImageId"]
+	ids := []string{}
+
+	for _, idptr := range idPtrs {
+		ids = append(ids, *idptr)
+	}
+
+	joined := strings.Join(ids, ", ")
+	fmt.Fprintf(file, "Image ID: %s\n", joined)
+	return nil
+}
