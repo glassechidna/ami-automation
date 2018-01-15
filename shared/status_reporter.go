@@ -105,6 +105,8 @@ func printerForType(stepType string) StepPrinter {
 		return &RunInstancesPrinter{}
 	case "aws:createImage":
 		return &CreateImagePrinter{}
+	case "aws:createTags":
+		return &CreateTagsPrinter{}
 	default:
 		return &DefaultPrinter{}
 	}

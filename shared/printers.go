@@ -128,3 +128,25 @@ func (p *CreateImagePrinter) Print(file *os.File, sess *session.Session, step *s
 	fmt.Fprintf(file, "Image ID: %s\n", joined)
 	return nil
 }
+
+type CreateTagsPrinter struct {}
+
+func (p *CreateTagsPrinter) Print(file *os.File, sess *session.Session, step *ssm.StepExecution) error {
+	tagsJson := step.Inputs["Tags"]
+	resourceJson := step.Inputs["ResourceIds"]
+
+	tags := []struct{
+		Key string
+		Value string
+	}{}
+	err := json.Unmarshal([]byte(*tagsJson), &tags)
+	if err != nil { return err }
+
+	fmt.Fprintf(file, "Resource IDs: %s\nTags:\n", *resourceJson)
+
+	for _, tag := range tags {
+		fmt.Fprintf(file, "  %s: %s\n", tag.Key, tag.Value)
+	}
+
+	return nil
+}
